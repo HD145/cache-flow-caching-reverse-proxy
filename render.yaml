@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: caching-proxy
+    runtime: docker
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: REDIS_URL
+        sync: false
+      - key: PROXY_ADMIN_TOKEN
+        generateValue: true
+      - key: PROXY_BACKEND_URL
+        value: https://jsonplaceholder.typicode.com
