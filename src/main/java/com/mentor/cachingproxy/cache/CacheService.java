@@ -79,7 +79,7 @@ public class CacheService {
                     }
                 })
                 .onErrorResume(e -> {
-                    log.warn("Redis lookup failed for key: {}. Error: {}. Bypassing cache.", key, e.getMessage());
+                    log.warn("Redis lookup failed for key: {}. Error: {}. Bypassing cache.", key, describe(e));
                     return Mono.empty();
                 });
     }
@@ -100,7 +100,7 @@ public class CacheService {
         return Mono.fromCallable(() -> objectMapper.writeValueAsBytes(response))
                 .flatMap(bytes -> redisTemplate.opsForValue().set(key, bytes, ttl))
                 .onErrorResume(e -> {
-                    log.warn("Failed to write to Redis cache for key: {}. Error: {}. Bypassing store.", key, e.getMessage());
+                    log.warn("Failed to write to Redis cache for key: {}. Error: {}. Bypassing store.", key, describe(e));
                     return Mono.just(false);
                 });
     }
@@ -153,5 +153,17 @@ public class CacheService {
                     log.error("Failed to delete cache key: {}. Error: {}", finalKey, e.getMessage());
                     return Mono.just(false);
                 });
+    }
+
+    /** Walks the cause chain so wrapped connection errors (DNS, TLS, auth) are visible in logs. */
+    private static String describe(Throwable e) {
+        StringBuilder sb = new StringBuilder();
+        for (Throwable t = e; t != null && sb.length() < 400; t = t.getCause() == t ? null : t.getCause()) {
+            if (sb.length() > 0) {
+                sb.append(" <- ");
+            }
+            sb.append(t.getClass().getSimpleName()).append(": ").append(t.getMessage());
+        }
+        return sb.toString();
     }
 }
